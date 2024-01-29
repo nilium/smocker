@@ -4,7 +4,9 @@ import (
 	"crypto/tls"
 	"html/template"
 	"io"
+	"io/fs"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/Thiht/smocker/server/config"
@@ -15,6 +17,9 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	log "github.com/sirupsen/logrus"
 )
+
+// StaticAdmin is an optionally-defined embedded filesystem containing admin client files.
+var StaticAdmin fs.FS
 
 // TemplateRenderer is a custom html/template renderer for Echo framework
 type TemplateRenderer struct {
@@ -66,7 +71,11 @@ func Serve(config config.Config) {
 	})
 
 	// UI Routes
-	adminServerEngine.Static("/assets", config.StaticFiles)
+	if config.StaticFiles != "" || StaticAdmin == nil {
+		adminServerEngine.Static("/assets", config.StaticFiles)
+	} else {
+		adminServerEngine.StaticFS("/assets", StaticAdmin)
+	}
 	adminServerEngine.GET("/*", renderIndex(adminServerEngine, config))
 
 	log.WithField("port", config.ConfigListenPort).Info("Starting admin server")
@@ -102,7 +111,13 @@ func renderIndex(e *echo.Echo, cfg config.Config) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		// In development mode, index.html might not be available yet
 		if templateRenderer == nil {
-			template, err := template.ParseFiles(cfg.StaticFiles + "/index.html")
+			var template *template.Template
+			var err error
+			if cfg.StaticFiles != "" || StaticAdmin == nil {
+				template, err = template.ParseFiles(filepath.Join(cfg.StaticFiles, "index.html"))
+			} else {
+				template, err = template.ParseFS(StaticAdmin, "index.html")
+			}
 			if err != nil {
 				return c.String(http.StatusNotFound, "index is building...")
 			}

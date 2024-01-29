@@ -1,7 +1,6 @@
 .DS_Store
 .parcel-cache/
 .vscode/
-build/
 coverage/
 docs/.vuepress/dist/
 node_modules/
@@ -10,3 +9,5 @@ smocker
 smocker.test
 vendor/
 yarn-error.log
+build/*
+!build/client

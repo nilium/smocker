@@ -65,6 +65,11 @@ start: $(REFLEX)
 build:
 	go build $(GO_LDFLAGS) -o ./build/$(APPNAME)
 
+.PHONY: yarn
+yarn:
+	yarn install --frozen-lockfile --ignore-scripts
+	yarn build
+
 .PHONY: lint
 lint: $(GOLANGCILINT)
 	$(GOLANGCILINT) run
@@ -93,10 +98,10 @@ start-integration: $(VENOM)
 	$(VENOM) run tests/features/$(SUITE)
 
 coverage/test-cover.out:
-	$(MAKE) test
+	@$(MAKE) test
 
 coverage/test-integration-cover.out:
-	$(MAKE) test-integration
+	@$(MAKE) test-integration
 
 .PHONY: coverage
 coverage: $(GOCOVMERGE) coverage/test-cover.out coverage/test-integration-cover.out
@@ -128,13 +133,14 @@ optimize:
 # The following targets are only available for CI usage
 
 build/smocker.tar.gz:
-	$(MAKE) build
-	yarn install --frozen-lockfile --ignore-scripts
-	yarn build
-	cd build/; tar -czvf smocker.tar.gz *
+	@$(MAKE) yarn
+	@$(MAKE) build
+	cd build/; tar -czvf smocker.tar.gz smocker
 
 .PHONY: release
-release: build/smocker.tar.gz
+release:
+	git clean build -xf
+	@$(MAKE) build/smocker.tar.gz
 
 .PHONY: start-release
 start-release: clean build/smocker.tar.gz
